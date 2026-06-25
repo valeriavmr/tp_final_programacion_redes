@@ -88,7 +88,7 @@ def guardar_followers(usuario_github, lista_followers):
         print(f"[ERROR BD] No se guardaron los followers: {e}")
 
 # MANEJO DEL CLIENTE
-def manejar_cliente(cliente_socket,direccion):
+def manejar_cliente(cliente_socket):
     usuario = None
     try:
         # FASE DE AUTENTICACIÓN
@@ -133,7 +133,6 @@ def manejar_cliente(cliente_socket,direccion):
                     continue
                 
                 url = f"https://api.github.com/users/{usuario_github}/repos"
-                print(f"Hola! La URL es: {url}")
                 
                 try:
                     #Hacemos una llamada a la api
@@ -208,7 +207,6 @@ def manejar_cliente(cliente_socket,direccion):
                         if u != usuario:
                             try:
                                 sock.send(mensaje_formateado.encode('utf-8'))
-                                print(f"OK -> {u}")
                             except Exception:
                                 pass
 
@@ -254,8 +252,8 @@ def iniciar_servidor():
     
     try:
         while True:
-            cliente_socket, direccion = servidor.accept()
-            hilo = threading.Thread(target=manejar_cliente, args=(cliente_socket, direccion))
+            cliente_socket, _ = servidor.accept()
+            hilo = threading.Thread(target=manejar_cliente, args=(cliente_socket,))
             hilo.start()
     except KeyboardInterrupt:
         print("[SERVIDOR DETENIDO]")
