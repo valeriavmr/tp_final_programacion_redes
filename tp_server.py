@@ -201,9 +201,7 @@ def manejar_cliente(cliente_socket):
                 mensaje_formateado = f"[DIFUSIÓN de {usuario}]: {texto_difusion}"
 
                 with clientes_lock:
-                    print("Clientes conectados:", list(clientes_conectados.keys()))
                     for u, sock in clientes_conectados.items():
-                        print(f"Enviando difusión a {u}")
                         if u != usuario:
                             try:
                                 sock.send(mensaje_formateado.encode('utf-8'))
