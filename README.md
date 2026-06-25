@@ -45,3 +45,9 @@ python cliente.py
 /usuarios
 
 /adios
+
+## Mensajes sin comando:
+Cualquier mensaje que no esté precedido por / se interpreta como un mensaje de chat. 
+El servidor lo recibe, lo muestra en consola y permite al operador responder directamente al cliente.
+
+## Hecho por: Valeria Moreno - @valeriavmr

@@ -225,7 +225,10 @@ def manejar_cliente(cliente_socket):
                 break # Rompe el bucle 'while', saltando directo al bloque 'finally' para limpiar todo
 
             else:
-                cliente_socket.send("Comando no reconocido.".encode('utf-8'))
+                #Para permitir el chat entre servidor y cliente no se usan comandos
+                print(f"[{usuario}] {mensaje}")
+                respuesta = input("Servidor: ")
+                cliente_socket.send(f"[SERVIDOR]: {respuesta}".encode("utf-8"))
 
     except Exception as e:
         print(f"[ERROR] Conexión interrumpida con {usuario}: {e}")
