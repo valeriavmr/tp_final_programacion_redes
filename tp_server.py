@@ -87,19 +87,20 @@ def guardar_followers(usuario_github, lista_followers):
     except mysql.connector.Error as e:
         print(f"[ERROR BD] No se guardaron los followers: {e}")
 
-# MANEJO DEL CLIENTE (Hilos secundarios)
-def manejar_cliente(cliente_socket, direccion):
+# MANEJO DEL CLIENTE
+def manejar_cliente(cliente_socket,direccion):
     usuario = None
     try:
         # FASE DE AUTENTICACIÓN
         credenciales = cliente_socket.recv(1024).decode('utf-8')
+
+        #Se verifica que los datos de las credenciales se hayan recibido y que estén ambos
         if not credenciales or "," not in credenciales:
             cliente_socket.send("ERROR: Formato incorrecto".encode('utf-8'))
             cliente_socket.close()
             return
 
         usuario, contrasena = credenciales.split(",")
-        
         if not validar_credenciales(usuario, contrasena):
             cliente_socket.send("RECHAZADO: Credenciales inválidas".encode('utf-8'))
             cliente_socket.close()
@@ -135,16 +136,20 @@ def manejar_cliente(cliente_socket, direccion):
                 print(f"Hola! La URL es: {url}")
                 
                 try:
+                    #Hacemos una llamada a la api
                     respuesta_api = requests.get(url, headers={'User-Agent': 'Python-Socket-App'}, timeout=5)
                     
+                    #Si se realizo bien la consulta, pasamos a guardar los datos en el repo
                     if respuesta_api.status_code == 200:
                         repos = respuesta_api.json()
                         guardar_repositorios(usuario_github, repos)
                         cliente_socket.send(f"OK: Se guardaron {len(repos)} repositorios de {usuario_github}.".encode('utf-8'))
+                    
+                    #Manejo de errores varios
                     elif respuesta_api.status_code == 403:
                         cliente_socket.send("ERROR: Límite de peticiones de GitHub excedido (Rate Limit). Intenta más tarde.".encode('utf-8'))
                     else:
-                        cliente_socket.send(f"ERROR: GitHub respondió código {respuesta_api.status_code}. ¿El usuario existe?".encode('utf-8'))
+                        cliente_socket.send(f"ERROR: GitHub respondió código {respuesta_api.status_code}.".encode('utf-8'))
                 
                 except requests.exceptions.Timeout:
                     cliente_socket.send("ERROR: La API de GitHub tardó demasiado en responder (Timeout).".encode('utf-8'))
@@ -164,12 +169,16 @@ def manejar_cliente(cliente_socket, direccion):
                 url = f"https://api.github.com/users/{usuario_github}/followers"
                 
                 try:
+                    #Llamamos a la api
                     respuesta_api = requests.get(url, headers={'User-Agent': 'Python-Socket-App'}, timeout=5)
                     
+                    #Si la llamada se realizo correctamente, obtenemos el json de los seguidores y los guardamos en la base
                     if respuesta_api.status_code == 200:
                         followers = respuesta_api.json()
                         guardar_followers(usuario_github, followers)
                         cliente_socket.send(f"OK: Se guardaron {len(followers)} followers de {usuario_github}.".encode('utf-8'))
+
+                    #Manejo de errores de la API
                     elif respuesta_api.status_code == 403:
                         cliente_socket.send("ERROR: Límite de peticiones de GitHub excedido.".encode('utf-8'))
                     else:
@@ -182,22 +191,31 @@ def manejar_cliente(cliente_socket, direccion):
 
             # Comando c) /hora
             elif mensaje.strip() == "/hora":
+
+                #Obtenemos la hora actual del sistema y le damos el formato hora:minutos:segundos
                 hora_actual = datetime.now().strftime("%H:%M:%S")
                 cliente_socket.send(f"Hora del servidor: {hora_actual}".encode('utf-8'))
 
             # Comando d) /todos "mensaje"
             elif mensaje.startswith("/todos "):
-                texto_difusion = mensaje[7:] # Cortamos el "/todos " del inicio
+                texto_difusion = mensaje[7:]
                 mensaje_formateado = f"[DIFUSIÓN de {usuario}]: {texto_difusion}"
-                
-                # Enviamos el mensaje a absolutamente todos los sockets guardados, excepto a nosotros mismos si se prefiere
+
                 with clientes_lock:
+                    print("Clientes conectados:", list(clientes_conectados.keys()))
                     for u, sock in clientes_conectados.items():
-                        try:
-                            sock.send(mensaje_formateado.encode('utf-8'))
-                        except Exception:
-                            pass # Manejo de sockets caídos
-                cliente_socket.send("Mensaje de difusión enviado con éxito.".encode('utf-8'))
+                        print(f"Enviando difusión a {u}")
+                        if u != usuario:
+                            try:
+                                sock.send(mensaje_formateado.encode('utf-8'))
+                                print(f"OK -> {u}")
+                            except Exception:
+                                pass
+
+                # Confirmación para quien envió el mensaje
+                cliente_socket.send(
+                    "Mensaje de difusión enviado con éxito.".encode('utf-8')
+                )
             
             # Comando e) /usuarios
             elif mensaje.strip() == "/usuarios":
